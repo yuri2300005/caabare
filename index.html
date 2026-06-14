@@ -12,14 +12,17 @@
       <div class="brand-badge">CV</div>
       <h1>Cabaré da Velha</h1>
       <p>Dashboard de controle de farm</p>
+
       <div class="field">
         <label>Usuário</label>
         <input id="loginUser" type="text" placeholder="Digite seu usuário" />
       </div>
+
       <div class="field">
         <label>Senha</label>
         <input id="loginPass" type="password" placeholder="Digite sua senha" />
       </div>
+
       <button class="btn primary" onclick="login()">Entrar no painel</button>
     </div>
   </div>
@@ -33,11 +36,13 @@
           <span>Painel interno</span>
         </div>
       </div>
+
       <nav>
         <button class="nav-btn active" onclick="showPage('dashboard', this)">Dashboard</button>
         <button class="nav-btn" onclick="showPage('farm', this)">Enviar Farm</button>
         <button id="membersNav" class="nav-btn" onclick="showPage('members', this)">Membros</button>
       </nav>
+
       <button class="logout" onclick="logout()">Sair</button>
     </aside>
 
@@ -47,6 +52,7 @@
           <h2 id="pageTitle">Dashboard</h2>
           <p id="welcomeText">Bem-vindo ao painel</p>
         </div>
+
         <div class="profile-pill">
           <span id="userInitial">A</span>
           <div>
@@ -58,20 +64,48 @@
 
       <section id="dashboardPage" class="page">
         <div class="stats-grid">
-          <div class="stat-card"><span>Total de membros</span><strong id="totalMembers">0</strong><small>Equipe cadastrada</small></div>
-          <div class="stat-card"><span>Em dia</span><strong id="onTimeCount">0</strong><small>Status verde</small></div>
-          <div class="stat-card alert"><span>Atrasados</span><strong id="lateCount">0</strong><small>Precisam farmar</small></div>
-          <div class="stat-card"><span>Farms enviados</span><strong id="farmCount">0</strong><small>Histórico salvo</small></div>
+          <div class="stat-card">
+            <span>Total de membros</span>
+            <strong id="totalMembers">0</strong>
+            <small>Equipe cadastrada</small>
+          </div>
+
+          <div class="stat-card">
+            <span>Em dia</span>
+            <strong id="onTimeCount">0</strong>
+            <small>Status verde</small>
+          </div>
+
+          <div class="stat-card alert">
+            <span>Atrasados</span>
+            <strong id="lateCount">0</strong>
+            <small>Precisam farmar</small>
+          </div>
+
+          <div class="stat-card">
+            <span>Farms enviados</span>
+            <strong id="farmCount">0</strong>
+            <small>Histórico salvo</small>
+          </div>
         </div>
 
         <div class="panel">
           <div class="panel-head">
             <h3>Status dos membros</h3>
-            <button class="btn ghost" onclick="resetDemo()">Resetar demo</button>
+            <button class="btn ghost" onclick="resetDemo()">Resetar farms</button>
           </div>
+
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Nome</th><th>Passaporte</th><th>Cargo</th><th>Status</th><th>Último farm</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Passaporte</th>
+                  <th>Cargo</th>
+                  <th>Status</th>
+                  <th>Último farm</th>
+                </tr>
+              </thead>
               <tbody id="membersTable"></tbody>
             </table>
           </div>
@@ -82,14 +116,30 @@
         <div class="form-grid">
           <div class="panel">
             <h3>Enviar novo farm</h3>
-            <p class="muted">Preencha a descrição e anexe um comprovante. Nesta versão sem banco, fica salvo no navegador.</p>
-            <div class="field"><label>Descrição</label><textarea id="farmDescription" placeholder="Ex: Farm de itens, lavagem, coleta, entrega..."></textarea></div>
-            <div class="field"><label>Quantidade / valor</label><input id="farmAmount" type="number" placeholder="Ex: 100" /></div>
-            <div class="field"><label>Comprovante</label><input id="farmProof" type="file" accept="image/*" /></div>
+            <p class="muted">
+              Preencha a descrição e anexe um comprovante. O envio ficará salvo no banco online.
+            </p>
+
+            <div class="field">
+              <label>Descrição</label>
+              <textarea id="farmDescription" placeholder="Ex: Farm de itens, lavagem, coleta, entrega..."></textarea>
+            </div>
+
+            <div class="field">
+              <label>Quantidade / valor</label>
+              <input id="farmAmount" type="number" placeholder="Ex: 100" />
+            </div>
+
+            <div class="field">
+              <label>Comprovante</label>
+              <input id="farmProof" type="file" accept="image/*" />
+            </div>
+
             <button class="btn primary" onclick="sendFarm()">Enviar farm</button>
           </div>
+
           <div class="panel">
-            <h3>Meus últimos envios</h3>
+            <h3>Últimos envios</h3>
             <div id="farmHistory" class="history"></div>
           </div>
         </div>
@@ -99,13 +149,39 @@
         <div class="form-grid">
           <div class="panel">
             <h3>Cadastrar membro</h3>
-            <div class="field"><label>Nome</label><input id="newName" placeholder="Nome do membro" /></div>
-            <div class="field"><label>Passaporte</label><input id="newPassport" placeholder="Ex: 1020" /></div>
-            <div class="field"><label>Usuário</label><input id="newUser" placeholder="login" /></div>
-            <div class="field"><label>Senha</label><input id="newPass" placeholder="senha" /></div>
-            <div class="field"><label>Cargo</label><select id="newRole"><option value="membro">Membro</option><option value="vice_lider">Vice-líder</option><option value="lider">Líder</option></select></div>
+
+            <div class="field">
+              <label>Nome</label>
+              <input id="newName" placeholder="Nome do membro" />
+            </div>
+
+            <div class="field">
+              <label>Passaporte</label>
+              <input id="newPassport" placeholder="Ex: 1020" />
+            </div>
+
+            <div class="field">
+              <label>Usuário</label>
+              <input id="newUser" placeholder="login" />
+            </div>
+
+            <div class="field">
+              <label>Senha</label>
+              <input id="newPass" placeholder="senha" />
+            </div>
+
+            <div class="field">
+              <label>Cargo</label>
+              <select id="newRole">
+                <option value="membro">Membro</option>
+                <option value="vice_lider">Vice-líder</option>
+                <option value="lider">Líder</option>
+              </select>
+            </div>
+
             <button class="btn primary" onclick="addMember()">Adicionar usuário</button>
           </div>
+
           <div class="panel">
             <h3>Usuários cadastrados</h3>
             <div id="userList" class="history"></div>
@@ -115,7 +191,7 @@
     </section>
   </main>
 
-  <<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js"></script>
 </body>
 </html>
