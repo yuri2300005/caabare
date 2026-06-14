@@ -16,12 +16,17 @@ async function getUsers() {
 }
 
 async function getFarms() {
-  const { data, error } = await db.from("farms").select("*").order("id", { ascending: false });
+  const { data, error } = await db
+    .from("farms")
+    .select("*")
+    .order("id", { ascending: false });
+
   if (error) {
     alert("Erro ao buscar farms");
     console.error(error);
     return [];
   }
+
   return data;
 }
 
@@ -43,7 +48,7 @@ async function login() {
 
   currentUser = data;
   localStorage.setItem("cv_session", JSON.stringify(currentUser));
-  startApp();
+  await startApp();
 }
 
 function logout() {
@@ -130,7 +135,11 @@ async function renderMembers() {
 
   tbody.innerHTML = visibleUsers.map(u => `
     <tr>
-      <td><strong>${u.nome}</strong></td>
+      <td>
+        <button class="member-link" onclick="openMemberHistory(${u.id})">
+          <strong>${u.nome}</strong>
+        </button>
+      </td>
       <td>${u.passaporte}</td>
       <td><span class="badge role">${formatRole(u.cargo)}</span></td>
       <td>
@@ -146,17 +155,42 @@ async function renderMembers() {
 async function sendFarm() {
   const desc = document.getElementById("farmDescription").value.trim();
   const amount = document.getElementById("farmAmount").value.trim();
+  const fileInput = document.getElementById("farmProof");
+  const file = fileInput.files[0];
 
   if (!desc) {
     alert("Coloque a descrição do farm");
     return;
   }
 
+  let comprovanteUrl = "";
+
+  if (file) {
+    const fileName = `${currentUser.id}_${Date.now()}_${file.name}`;
+
+    const { error: uploadError } = await db.storage
+      .from("comprovantes")
+      .upload(fileName, file);
+
+    if (uploadError) {
+      alert("Erro ao enviar imagem");
+      console.error(uploadError);
+      return;
+    }
+
+    const { data } = db.storage
+      .from("comprovantes")
+      .getPublicUrl(fileName);
+
+    comprovanteUrl = data.publicUrl;
+  }
+
   const { error } = await db.from("farms").insert({
     user_id: currentUser.id,
     nome: currentUser.nome,
     descricao: desc,
-    quantidade: amount
+    quantidade: amount,
+    comprovante_url: comprovanteUrl
   });
 
   if (error) {
@@ -175,6 +209,7 @@ async function sendFarm() {
 
   document.getElementById("farmDescription").value = "";
   document.getElementById("farmAmount").value = "";
+  document.getElementById("farmProof").value = "";
 
   alert("Farm enviado com sucesso");
   await renderAll();
@@ -203,6 +238,17 @@ async function renderFarmHistory() {
       <small>${new Date(f.criado_em).toLocaleString("pt-BR")}</small>
       <p>${f.descricao}</p>
       <small>Quantidade/valor: ${f.quantidade || "não informado"}</small>
+
+      ${
+        f.comprovante_url
+          ? `
+            <br><br>
+            <a href="${f.comprovante_url}" target="_blank" class="btn ghost">Ver comprovante</a>
+            <br><br>
+            <img src="${f.comprovante_url}" style="max-width:100%;border-radius:14px;border:1px solid #333;">
+          `
+          : `<p class="muted">Sem comprovante anexado.</p>`
+      }
     </div>
   `).join("");
 }
@@ -264,8 +310,74 @@ async function renderUserList() {
       <strong>${u.nome}</strong>
       <small>Passaporte ${u.passaporte} • ${formatRole(u.cargo)}</small>
       <p>Login: ${u.usuario}</p>
+      <button class="btn ghost" onclick="openMemberHistory(${u.id})">Ver histórico</button>
     </div>
   `).join("");
+}
+
+async function openMemberHistory(userId) {
+  const users = await getUsers();
+  const farms = await getFarms();
+
+  const user = users.find(u => u.id === userId);
+
+  if (!user) {
+    alert("Membro não encontrado");
+    return;
+  }
+
+  const memberFarms = farms.filter(f => f.user_id === userId);
+
+  document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
+  document.getElementById("dashboardPage").classList.remove("hidden");
+
+  document.getElementById("pageTitle").innerText = `Histórico de ${user.nome}`;
+
+  const dashboardPage = document.getElementById("dashboardPage");
+
+  dashboardPage.innerHTML = `
+    <div class="panel">
+      <div class="panel-head">
+        <div>
+          <h3>${user.nome}</h3>
+          <p class="muted">
+            Passaporte: ${user.passaporte} • Cargo: ${formatRole(user.cargo)} • Status: ${
+              user.last_farm === "Hoje" ? "Em dia" : "Atrasado"
+            }
+          </p>
+        </div>
+        <button class="btn ghost" onclick="location.reload()">Voltar</button>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:18px;">
+      <h3>Histórico completo de farms</h3>
+
+      ${
+        memberFarms.length
+          ? memberFarms.map(f => `
+            <div class="history-item">
+              <strong>${f.nome}</strong>
+              <small>${new Date(f.criado_em).toLocaleString("pt-BR")}</small>
+              <p>${f.descricao}</p>
+              <small>Quantidade/valor: ${f.quantidade || "não informado"}</small>
+
+              ${
+                f.comprovante_url
+                  ? `
+                    <br><br>
+                    <a href="${f.comprovante_url}" target="_blank" class="btn ghost">Abrir comprovante</a>
+                    <br><br>
+                    <img src="${f.comprovante_url}" style="max-width:100%;border-radius:14px;border:1px solid #333;">
+                  `
+                  : `<p class="muted">Sem comprovante anexado.</p>`
+              }
+            </div>
+          `).join("")
+          : `<p class="muted">Esse membro ainda não enviou nenhum farm.</p>`
+      }
+    </div>
+  `;
 }
 
 async function resetDemo() {
@@ -279,7 +391,7 @@ async function resetDemo() {
   await db.from("farms").delete().neq("id", 0);
 
   alert("Farms apagados");
-  await renderAll();
+  location.reload();
 }
 
 window.onload = async () => {
