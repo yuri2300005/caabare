@@ -1,141 +1,135 @@
-const DEFAULT_USERS = [];
+const DEFAULT_USERS = [
+  {
+    id: 1,
+    nome: "Velha",
+    passaporte: "0001",
+    usuario: "velha",
+    senha: "avelha6924",
+    cargo: "lider",
+    lastFarm: "Hoje"
+  }
+];
 
 let currentUser = null;
 
-function getUsers(){
-  return JSON.parse(localStorage.getItem('cv_users')) || DEFAULT_USERS;
+function getUsers() {
+  return JSON.parse(localStorage.getItem("cv_users")) || DEFAULT_USERS;
 }
 
-function setUsers(v){
-  localStorage.setItem('cv_users', JSON.stringify(v));
+function setUsers(users) {
+  localStorage.setItem("cv_users", JSON.stringify(users));
 }
 
-function getFarms(){
-  return JSON.parse(localStorage.getItem('cv_farms')) || [];
+function getFarms() {
+  return JSON.parse(localStorage.getItem("cv_farms")) || [];
 }
 
-function setFarms(v){
-  localStorage.setItem('cv_farms', JSON.stringify(v));
+function setFarms(farms) {
+  localStorage.setItem("cv_farms", JSON.stringify(farms));
 }
 
-function setupFirstAdmin(){
-  const users = getUsers();
+function login() {
+  const usuario = document.getElementById("loginUser").value.trim();
+  const senha = document.getElementById("loginPass").value.trim();
 
-  if(users.length === 0){
-    alert('Primeiro acesso: crie o usuário líder do painel.');
+  const user = getUsers().find(
+    u => u.usuario === usuario && u.senha === senha
+  );
 
-    const nome = prompt('Nome do líder:');
-    const passaporte = prompt('Passaporte:');
-    const usuario = prompt('Login:');
-    const senha = prompt('Senha:');
-
-    if(!nome || !passaporte || !usuario || !senha){
-      alert('Você precisa preencher tudo para criar o primeiro acesso.');
-      return setupFirstAdmin();
-    }
-
-    const admin = {
-      id: Date.now(),
-      nome,
-      passaporte,
-      usuario,
-      senha,
-      cargo: 'lider',
-      lastFarm: 'Hoje'
-    };
-
-    setUsers([admin]);
-
-    alert('Usuário líder criado com sucesso. Agora faça login.');
+  if (!user) {
+    alert("Login inválido");
+    return;
   }
-}
-
-function login(){
-  const u = document.getElementById('loginUser').value.trim();
-  const p = document.getElementById('loginPass').value.trim();
-
-  const user = getUsers().find(x => x.usuario === u && x.senha === p);
-
-  if(!user) return alert('Login inválido');
 
   currentUser = user;
-  localStorage.setItem('cv_session', JSON.stringify(user));
+  localStorage.setItem("cv_session", JSON.stringify(user));
   startApp();
 }
 
-function logout(){
-  localStorage.removeItem('cv_session');
+function logout() {
+  localStorage.removeItem("cv_session");
   location.reload();
 }
 
-function startApp(){
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('app').classList.remove('hidden');
+function startApp() {
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
 
-  document.getElementById('userName').innerText = currentUser.nome;
-  document.getElementById('userRole').innerText = formatRole(currentUser.cargo);
-  document.getElementById('userInitial').innerText = currentUser.nome[0].toUpperCase();
-  document.getElementById('welcomeText').innerText = `Logado como ${formatRole(currentUser.cargo)}`;
+  document.getElementById("userName").innerText = currentUser.nome;
+  document.getElementById("userRole").innerText = formatRole(currentUser.cargo);
+  document.getElementById("userInitial").innerText = currentUser.nome[0].toUpperCase();
+  document.getElementById("welcomeText").innerText = `Logado como ${formatRole(currentUser.cargo)}`;
 
-  if(currentUser.cargo === 'membro'){
-    document.getElementById('membersNav').style.display = 'none';
+  const membersNav = document.getElementById("membersNav");
+
+  if (membersNav) {
+    membersNav.style.display = currentUser.cargo === "membro" ? "none" : "block";
   }
 
   renderAll();
 }
 
-function formatRole(r){
-  return r === 'lider' ? 'Líder' : r === 'vice_lider' ? 'Vice-líder' : 'Membro';
+function formatRole(role) {
+  if (role === "lider") return "Líder";
+  if (role === "vice_lider") return "Vice-líder";
+  return "Membro";
 }
 
-function showPage(page, btn){
-  document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-  document.getElementById(page + 'Page').classList.remove('hidden');
+function showPage(page, btn) {
+  document.querySelectorAll(".page").forEach(p => {
+    p.classList.add("hidden");
+  });
 
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  document.getElementById(page + "Page").classList.remove("hidden");
 
-  document.getElementById('pageTitle').innerText =
-    page === 'farm' ? 'Enviar Farm' :
-    page === 'members' ? 'Membros' :
-    'Dashboard';
+  document.querySelectorAll(".nav-btn").forEach(b => {
+    b.classList.remove("active");
+  });
+
+  if (btn) btn.classList.add("active");
+
+  document.getElementById("pageTitle").innerText =
+    page === "farm" ? "Enviar Farm" :
+    page === "members" ? "Membros" :
+    "Dashboard";
 
   renderAll();
 }
 
-function renderAll(){
+function renderAll() {
   renderStats();
   renderMembers();
   renderFarmHistory();
   renderUserList();
 }
 
-function renderStats(){
+function renderStats() {
   const users = getUsers();
   const farms = getFarms();
 
-  const visible = currentUser.cargo === 'membro'
+  const visibleUsers = currentUser.cargo === "membro"
     ? users.filter(u => u.id === currentUser.id)
     : users;
 
-  document.getElementById('totalMembers').innerText = visible.length;
+  document.getElementById("totalMembers").innerText = visibleUsers.length;
 
-  document.getElementById('farmCount').innerText =
-    currentUser.cargo === 'membro'
+  document.getElementById("farmCount").innerText =
+    currentUser.cargo === "membro"
       ? farms.filter(f => f.userId === currentUser.id).length
       : farms.length;
 
-  document.getElementById('onTimeCount').innerText =
-    visible.filter(u => u.lastFarm === 'Hoje').length;
+  document.getElementById("onTimeCount").innerText =
+    visibleUsers.filter(u => u.lastFarm === "Hoje").length;
 
-  document.getElementById('lateCount').innerText =
-    visible.filter(u => u.lastFarm !== 'Hoje').length;
+  document.getElementById("lateCount").innerText =
+    visibleUsers.filter(u => u.lastFarm !== "Hoje").length;
 }
 
-function renderMembers(){
-  const tbody = document.getElementById('membersTable');
+function renderMembers() {
+  const tbody = document.getElementById("membersTable");
+  if (!tbody) return;
 
-  const users = currentUser.cargo === 'membro'
+  const users = currentUser.cargo === "membro"
     ? getUsers().filter(u => u.id === currentUser.id)
     : getUsers();
 
@@ -145,20 +139,23 @@ function renderMembers(){
       <td>${u.passaporte}</td>
       <td><span class="badge role">${formatRole(u.cargo)}</span></td>
       <td>
-        <span class="badge ${u.lastFarm === 'Hoje' ? 'ok' : 'late'}">
-          ${u.lastFarm === 'Hoje' ? 'EM DIA' : 'ATRASADO'}
+        <span class="badge ${u.lastFarm === "Hoje" ? "ok" : "late"}">
+          ${u.lastFarm === "Hoje" ? "EM DIA" : "ATRASADO"}
         </span>
       </td>
       <td>${u.lastFarm}</td>
     </tr>
-  `).join('');
+  `).join("");
 }
 
-function sendFarm(){
-  const desc = document.getElementById('farmDescription').value.trim();
-  const amount = document.getElementById('farmAmount').value.trim();
+function sendFarm() {
+  const desc = document.getElementById("farmDescription").value.trim();
+  const amount = document.getElementById("farmAmount").value.trim();
 
-  if(!desc) return alert('Coloque a descrição do farm');
+  if (!desc) {
+    alert("Coloque a descrição do farm");
+    return;
+  }
 
   const farms = getFarms();
 
@@ -166,91 +163,110 @@ function sendFarm(){
     id: Date.now(),
     userId: currentUser.id,
     nome: currentUser.nome,
-    desc,
-    amount,
-    date: new Date().toLocaleString('pt-BR')
+    desc: desc,
+    amount: amount,
+    date: new Date().toLocaleString("pt-BR")
   });
 
   setFarms(farms);
 
-  const users = getUsers().map(u =>
-    u.id === currentUser.id ? {...u, lastFarm: 'Hoje'} : u
-  );
+  const users = getUsers().map(u => {
+    if (u.id === currentUser.id) {
+      return { ...u, lastFarm: "Hoje" };
+    }
+    return u;
+  });
 
   setUsers(users);
 
-  currentUser = {...currentUser, lastFarm: 'Hoje'};
-  localStorage.setItem('cv_session', JSON.stringify(currentUser));
+  currentUser = { ...currentUser, lastFarm: "Hoje" };
+  localStorage.setItem("cv_session", JSON.stringify(currentUser));
 
-  document.getElementById('farmDescription').value = '';
-  document.getElementById('farmAmount').value = '';
+  document.getElementById("farmDescription").value = "";
+  document.getElementById("farmAmount").value = "";
 
-  alert('Farm enviado com sucesso');
+  alert("Farm enviado com sucesso");
   renderAll();
 }
 
-function renderFarmHistory(){
-  const box = document.getElementById('farmHistory');
+function renderFarmHistory() {
+  const box = document.getElementById("farmHistory");
+  if (!box) return;
 
-  const farms = (
-    currentUser.cargo === 'membro'
-      ? getFarms().filter(f => f.userId === currentUser.id)
-      : getFarms()
-  ).slice(0, 8);
+  const farms = currentUser.cargo === "membro"
+    ? getFarms().filter(f => f.userId === currentUser.id)
+    : getFarms();
 
-  box.innerHTML = farms.length
-    ? farms.map(f => `
-      <div class="history-item">
-        <strong>${f.nome}</strong>
-        <small>${f.date}</small>
-        <p>${f.desc}</p>
-        <small>Quantidade/valor: ${f.amount || 'não informado'}</small>
-      </div>
-    `).join('')
-    : '<p class="muted">Nenhum farm enviado ainda.</p>';
+  const latestFarms = farms.slice(0, 8);
+
+  if (latestFarms.length === 0) {
+    box.innerHTML = `<p class="muted">Nenhum farm enviado ainda.</p>`;
+    return;
+  }
+
+  box.innerHTML = latestFarms.map(f => `
+    <div class="history-item">
+      <strong>${f.nome}</strong>
+      <small>${f.date}</small>
+      <p>${f.desc}</p>
+      <small>Quantidade/valor: ${f.amount || "não informado"}</small>
+    </div>
+  `).join("");
 }
 
-function addMember(){
-  if(currentUser.cargo === 'membro') return alert('Sem permissão');
+function addMember() {
+  if (currentUser.cargo === "membro") {
+    alert("Sem permissão");
+    return;
+  }
 
-  const nome = document.getElementById('newName').value.trim();
-  const passaporte = document.getElementById('newPassport').value.trim();
-  const usuario = document.getElementById('newUser').value.trim();
-  const senha = document.getElementById('newPass').value.trim();
-  const cargo = document.getElementById('newRole').value;
+  const nome = document.getElementById("newName").value.trim();
+  const passaporte = document.getElementById("newPassport").value.trim();
+  const usuario = document.getElementById("newUser").value.trim();
+  const senha = document.getElementById("newPass").value.trim();
+  const cargo = document.getElementById("newRole").value;
 
-  if(!nome || !passaporte || !usuario || !senha){
-    return alert('Preencha tudo');
+  if (!nome || !passaporte || !usuario || !senha) {
+    alert("Preencha todos os campos");
+    return;
   }
 
   const users = getUsers();
 
-  if(users.some(u => u.usuario === usuario)){
-    return alert('Usuário já existe');
+  if (users.some(u => u.usuario === usuario)) {
+    alert("Esse login já existe");
+    return;
   }
 
   users.push({
     id: Date.now(),
-    nome,
-    passaporte,
-    usuario,
-    senha,
-    cargo,
-    lastFarm: 'Atrasado'
+    nome: nome,
+    passaporte: passaporte,
+    usuario: usuario,
+    senha: senha,
+    cargo: cargo,
+    lastFarm: "Atrasado"
   });
 
   setUsers(users);
 
-  ['newName','newPassport','newUser','newPass'].forEach(id => {
-    document.getElementById(id).value = '';
-  });
+  document.getElementById("newName").value = "";
+  document.getElementById("newPassport").value = "";
+  document.getElementById("newUser").value = "";
+  document.getElementById("newPass").value = "";
 
+  alert("Usuário adicionado com sucesso");
   renderAll();
 }
 
-function renderUserList(){
-  const box = document.getElementById('userList');
-  if(!box) return;
+function renderUserList() {
+  const box = document.getElementById("userList");
+  if (!box) return;
+
+  if (currentUser.cargo === "membro") {
+    box.innerHTML = "";
+    return;
+  }
 
   box.innerHTML = getUsers().map(u => `
     <div class="history-item">
@@ -258,26 +274,24 @@ function renderUserList(){
       <small>Passaporte ${u.passaporte} • ${formatRole(u.cargo)}</small>
       <p>Login: ${u.usuario}</p>
     </div>
-  `).join('');
+  `).join("");
 }
 
-function resetDemo(){
-  if(!confirm('Isso vai apagar usuários, farms e sessão. Continuar?')) return;
+function resetDemo() {
+  if (!confirm("Tem certeza que deseja apagar todos os dados salvos?")) return;
 
-  localStorage.removeItem('cv_users');
-  localStorage.removeItem('cv_farms');
-  localStorage.removeItem('cv_session');
+  localStorage.removeItem("cv_users");
+  localStorage.removeItem("cv_farms");
+  localStorage.removeItem("cv_session");
 
   location.reload();
 }
 
 window.onload = () => {
-  setupFirstAdmin();
+  const session = localStorage.getItem("cv_session");
 
-  const s = localStorage.getItem('cv_session');
-
-  if(s){
-    currentUser = JSON.parse(s);
+  if (session) {
+    currentUser = JSON.parse(session);
     startApp();
   }
 };
