@@ -1,48 +1,48 @@
-const DEFAULT_USERS = [
-  {
-    id: 1,
-    nome: "Velha",
-    passaporte: "0001",
-    usuario: "velha",
-    senha: "avelha6924",
-    cargo: "lider",
-    lastFarm: "Hoje"
-  }
-];
+const SUPABASE_URL = "https://dlzlxkgpsonemvgvqnke.supabase.co";
+const SUPABASE_KEY = "sb_publishable_vASlKZ7EYpGT5og9sp7RGQ_qHQ73Mj6";
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = null;
 
-function getUsers() {
-  const saved = localStorage.getItem("cv_users");
-  return saved ? JSON.parse(saved) : DEFAULT_USERS;
+async function getUsers() {
+  const { data, error } = await db.from("users").select("*").order("id");
+  if (error) {
+    alert("Erro ao buscar usuários");
+    console.error(error);
+    return [];
+  }
+  return data;
 }
 
-function setUsers(users) {
-  localStorage.setItem("cv_users", JSON.stringify(users));
+async function getFarms() {
+  const { data, error } = await db.from("farms").select("*").order("id", { ascending: false });
+  if (error) {
+    alert("Erro ao buscar farms");
+    console.error(error);
+    return [];
+  }
+  return data;
 }
 
-function getFarms() {
-  const saved = localStorage.getItem("cv_farms");
-  return saved ? JSON.parse(saved) : [];
-}
-
-function setFarms(farms) {
-  localStorage.setItem("cv_farms", JSON.stringify(farms));
-}
-
-function login() {
+async function login() {
   const usuario = document.getElementById("loginUser").value.trim();
   const senha = document.getElementById("loginPass").value.trim();
 
-  const user = getUsers().find(u => u.usuario === usuario && u.senha === senha);
+  const { data, error } = await db
+    .from("users")
+    .select("*")
+    .eq("usuario", usuario)
+    .eq("senha", senha)
+    .single();
 
-  if (!user) {
+  if (error || !data) {
     alert("Login inválido");
     return;
   }
 
-  currentUser = user;
-  localStorage.setItem("cv_session", JSON.stringify(user));
+  currentUser = data;
+  localStorage.setItem("cv_session", JSON.stringify(currentUser));
   startApp();
 }
 
@@ -51,7 +51,7 @@ function logout() {
   location.reload();
 }
 
-function startApp() {
+async function startApp() {
   document.getElementById("loginScreen").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
 
@@ -65,7 +65,7 @@ function startApp() {
     membersNav.style.display = currentUser.cargo === "membro" ? "none" : "block";
   }
 
-  renderAll();
+  await renderAll();
 }
 
 function formatRole(role) {
@@ -74,7 +74,7 @@ function formatRole(role) {
   return "Membro";
 }
 
-function showPage(page, btn) {
+async function showPage(page, btn) {
   document.querySelectorAll(".page").forEach(p => p.classList.add("hidden"));
   document.getElementById(page + "Page").classList.remove("hidden");
 
@@ -86,19 +86,19 @@ function showPage(page, btn) {
     page === "members" ? "Membros" :
     "Dashboard";
 
-  renderAll();
+  await renderAll();
 }
 
-function renderAll() {
-  renderStats();
-  renderMembers();
-  renderFarmHistory();
-  renderUserList();
+async function renderAll() {
+  await renderStats();
+  await renderMembers();
+  await renderFarmHistory();
+  await renderUserList();
 }
 
-function renderStats() {
-  const users = getUsers();
-  const farms = getFarms();
+async function renderStats() {
+  const users = await getUsers();
+  const farms = await getFarms();
 
   const visibleUsers = currentUser.cargo === "membro"
     ? users.filter(u => u.id === currentUser.id)
@@ -108,40 +108,42 @@ function renderStats() {
 
   document.getElementById("farmCount").innerText =
     currentUser.cargo === "membro"
-      ? farms.filter(f => f.userId === currentUser.id).length
+      ? farms.filter(f => f.user_id === currentUser.id).length
       : farms.length;
 
   document.getElementById("onTimeCount").innerText =
-    visibleUsers.filter(u => u.lastFarm === "Hoje").length;
+    visibleUsers.filter(u => u.last_farm === "Hoje").length;
 
   document.getElementById("lateCount").innerText =
-    visibleUsers.filter(u => u.lastFarm !== "Hoje").length;
+    visibleUsers.filter(u => u.last_farm !== "Hoje").length;
 }
 
-function renderMembers() {
+async function renderMembers() {
   const tbody = document.getElementById("membersTable");
   if (!tbody) return;
 
-  const users = currentUser.cargo === "membro"
-    ? getUsers().filter(u => u.id === currentUser.id)
-    : getUsers();
+  const users = await getUsers();
 
-  tbody.innerHTML = users.map(u => `
+  const visibleUsers = currentUser.cargo === "membro"
+    ? users.filter(u => u.id === currentUser.id)
+    : users;
+
+  tbody.innerHTML = visibleUsers.map(u => `
     <tr>
       <td><strong>${u.nome}</strong></td>
       <td>${u.passaporte}</td>
       <td><span class="badge role">${formatRole(u.cargo)}</span></td>
       <td>
-        <span class="badge ${u.lastFarm === "Hoje" ? "ok" : "late"}">
-          ${u.lastFarm === "Hoje" ? "EM DIA" : "ATRASADO"}
+        <span class="badge ${u.last_farm === "Hoje" ? "ok" : "late"}">
+          ${u.last_farm === "Hoje" ? "EM DIA" : "ATRASADO"}
         </span>
       </td>
-      <td>${u.lastFarm}</td>
+      <td>${u.last_farm}</td>
     </tr>
   `).join("");
 }
 
-function sendFarm() {
+async function sendFarm() {
   const desc = document.getElementById("farmDescription").value.trim();
   const amount = document.getElementById("farmAmount").value.trim();
 
@@ -150,44 +152,45 @@ function sendFarm() {
     return;
   }
 
-  const farms = getFarms();
-
-  farms.unshift({
-    id: Date.now(),
-    userId: currentUser.id,
+  const { error } = await db.from("farms").insert({
+    user_id: currentUser.id,
     nome: currentUser.nome,
-    desc,
-    amount,
-    date: new Date().toLocaleString("pt-BR")
+    descricao: desc,
+    quantidade: amount
   });
 
-  setFarms(farms);
+  if (error) {
+    alert("Erro ao enviar farm");
+    console.error(error);
+    return;
+  }
 
-  const users = getUsers().map(u =>
-    u.id === currentUser.id ? { ...u, lastFarm: "Hoje" } : u
-  );
+  await db
+    .from("users")
+    .update({ last_farm: "Hoje" })
+    .eq("id", currentUser.id);
 
-  setUsers(users);
-
-  currentUser = { ...currentUser, lastFarm: "Hoje" };
+  currentUser.last_farm = "Hoje";
   localStorage.setItem("cv_session", JSON.stringify(currentUser));
 
   document.getElementById("farmDescription").value = "";
   document.getElementById("farmAmount").value = "";
 
   alert("Farm enviado com sucesso");
-  renderAll();
+  await renderAll();
 }
 
-function renderFarmHistory() {
+async function renderFarmHistory() {
   const box = document.getElementById("farmHistory");
   if (!box) return;
 
-  const farms = currentUser.cargo === "membro"
-    ? getFarms().filter(f => f.userId === currentUser.id)
-    : getFarms();
+  const farms = await getFarms();
 
-  const latestFarms = farms.slice(0, 8);
+  const visibleFarms = currentUser.cargo === "membro"
+    ? farms.filter(f => f.user_id === currentUser.id)
+    : farms;
+
+  const latestFarms = visibleFarms.slice(0, 8);
 
   if (latestFarms.length === 0) {
     box.innerHTML = `<p class="muted">Nenhum farm enviado ainda.</p>`;
@@ -197,14 +200,14 @@ function renderFarmHistory() {
   box.innerHTML = latestFarms.map(f => `
     <div class="history-item">
       <strong>${f.nome}</strong>
-      <small>${f.date}</small>
-      <p>${f.desc}</p>
-      <small>Quantidade/valor: ${f.amount || "não informado"}</small>
+      <small>${new Date(f.criado_em).toLocaleString("pt-BR")}</small>
+      <p>${f.descricao}</p>
+      <small>Quantidade/valor: ${f.quantidade || "não informado"}</small>
     </div>
   `).join("");
 }
 
-function addMember() {
+async function addMember() {
   if (currentUser.cargo === "membro") {
     alert("Sem permissão");
     return;
@@ -221,24 +224,20 @@ function addMember() {
     return;
   }
 
-  const users = getUsers();
-
-  if (users.some(u => u.usuario === usuario)) {
-    alert("Esse login já existe");
-    return;
-  }
-
-  users.push({
-    id: Date.now(),
+  const { error } = await db.from("users").insert({
     nome,
     passaporte,
     usuario,
     senha,
     cargo,
-    lastFarm: "Atrasado"
+    last_farm: "Atrasado"
   });
 
-  setUsers(users);
+  if (error) {
+    alert("Erro ao cadastrar usuário. Talvez esse login já exista.");
+    console.error(error);
+    return;
+  }
 
   document.getElementById("newName").value = "";
   document.getElementById("newPassport").value = "";
@@ -246,10 +245,10 @@ function addMember() {
   document.getElementById("newPass").value = "";
 
   alert("Usuário adicionado com sucesso");
-  renderAll();
+  await renderAll();
 }
 
-function renderUserList() {
+async function renderUserList() {
   const box = document.getElementById("userList");
   if (!box) return;
 
@@ -258,7 +257,9 @@ function renderUserList() {
     return;
   }
 
-  box.innerHTML = getUsers().map(u => `
+  const users = await getUsers();
+
+  box.innerHTML = users.map(u => `
     <div class="history-item">
       <strong>${u.nome}</strong>
       <small>Passaporte ${u.passaporte} • ${formatRole(u.cargo)}</small>
@@ -267,21 +268,25 @@ function renderUserList() {
   `).join("");
 }
 
-function resetDemo() {
-  if (!confirm("Isso vai apagar usuários, farms e sessão deste navegador. Continuar?")) return;
+async function resetDemo() {
+  if (currentUser.cargo !== "lider") {
+    alert("Apenas líder pode resetar");
+    return;
+  }
 
-  localStorage.removeItem("cv_users");
-  localStorage.removeItem("cv_farms");
-  localStorage.removeItem("cv_session");
+  if (!confirm("Tem certeza que deseja apagar todos os farms?")) return;
 
-  location.reload();
+  await db.from("farms").delete().neq("id", 0);
+
+  alert("Farms apagados");
+  await renderAll();
 }
 
-window.onload = () => {
+window.onload = async () => {
   const session = localStorage.getItem("cv_session");
 
   if (session) {
     currentUser = JSON.parse(session);
-    startApp();
+    await startApp();
   }
 };
